@@ -1,0 +1,16 @@
+[build]
+  command = "npm run build"
+  publish = "build"
+
+[build.environment]
+  REACT_APP_FIREBASE_API_KEY = "AIzaSyBri5mt5GLZiu0KQkuq0VU3QVPqAIFPf-s"
+  REACT_APP_FIREBASE_AUTH_DOMAIN = "resumeforge-5b846.firebaseapp.com"
+  REACT_APP_FIREBASE_PROJECT_ID = "resumeforge-5b846"
+  REACT_APP_FIREBASE_STORAGE_BUCKET = "resumeforge-5b846.appspot.com"
+  REACT_APP_FIREBASE_MESSAGING_SENDER_ID = "13782981121"
+  REACT_APP_FIREBASE_APP_ID = "1:13782981121:web:362f3d6b27d70528433e00"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
