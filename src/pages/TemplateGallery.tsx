@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
 interface Template {
@@ -89,6 +89,21 @@ const TemplateGallery: React.FC = () => {
     try {
       const userId = auth.currentUser.uid;
       
+      // Ensure user document exists
+      const userDocRef = doc(db, 'users', userId);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (!userDoc.exists()) {
+        // Create user document if it doesn't exist
+        await setDoc(userDocRef, {
+          email: auth.currentUser.email,
+          displayName: auth.currentUser.displayName || '',
+          photoURL: auth.currentUser.photoURL || '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+      }
+      
       // Create new resume document in the user's resumes subcollection
       const resumeData = {
         title: 'Untitled Resume',
@@ -97,8 +112,8 @@ const TemplateGallery: React.FC = () => {
         updatedAt: new Date().toISOString(),
         content: {
           personalInfo: {
-            name: '',
-            email: '',
+            name: auth.currentUser.displayName || '',
+            email: auth.currentUser.email || '',
             phone: '',
             address: '',
             linkedin: '',
@@ -117,6 +132,39 @@ const TemplateGallery: React.FC = () => {
       const docRef = await addDoc(userResumesRef, resumeData);
       
       console.log("Resume created successfully with ID:", docRef.id);
+      
+      // Create user settings if they don't exist
+      const userSettingsRef = doc(db, 'userSettings', userId);
+      const userSettingsDoc = await getDoc(userSettingsRef);
+      
+      if (!userSettingsDoc.exists()) {
+        await setDoc(userSettingsRef, {
+          userId: userId,
+          recentlyUsed: {
+            resumes: [docRef.id],
+            templates: [selectedTemplate]
+          },
+          preferences: {
+            theme: 'light',
+            language: 'en'
+          }
+        });
+      } else {
+        // Update recently used resumes in user settings
+        const settings = userSettingsDoc.data();
+        const recentResumes = settings.recentlyUsed?.resumes || [];
+        const updatedResumes = [docRef.id, ...recentResumes.filter(id => id !== docRef.id)].slice(0, 10);
+        
+        await setDoc(userSettingsRef, {
+          ...settings,
+          recentlyUsed: {
+            ...settings.recentlyUsed,
+            resumes: updatedResumes,
+            templates: [selectedTemplate, ...(settings.recentlyUsed?.templates || []).filter(id => id !== selectedTemplate)].slice(0, 5)
+          }
+        }, { merge: true });
+      }
+      
       navigate(`/builder/${docRef.id}`);
     } catch (err: any) {
       console.error('Error creating resume:', err);
@@ -125,7 +173,7 @@ const TemplateGallery: React.FC = () => {
         message: err.message,
         stack: err.stack
       });
-      setError('Failed to create resume. Please try again.');
+      setError(`Failed to create resume: ${err.message}`);
     } finally {
       setLoading(false);
     }

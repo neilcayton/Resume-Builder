@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
 const ResumeBuilder: React.FC = () => {
@@ -10,10 +10,15 @@ const ResumeBuilder: React.FC = () => {
   const [error, setError] = useState('');
   const [resumeData, setResumeData] = useState<any>(null);
   const [activeSection, setActiveSection] = useState('personalInfo');
+  const [saveStatus, setSaveStatus] = useState('');
+  const [autoSaveTimer, setAutoSaveTimer] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const fetchResumeData = async () => {
-      if (!resumeId || !auth.currentUser) return;
+      if (!resumeId || !auth.currentUser) {
+        navigate('/login');
+        return;
+      }
 
       try {
         const userId = auth.currentUser.uid;
@@ -26,7 +31,10 @@ const ResumeBuilder: React.FC = () => {
           return;
         }
 
-        setResumeData(resumeSnap.data());
+        setResumeData({
+          ...resumeSnap.data(),
+          id: resumeSnap.id
+        });
       } catch (err: any) {
         console.error('Error fetching resume:', err);
         console.error('Detailed error:', {
@@ -34,26 +42,67 @@ const ResumeBuilder: React.FC = () => {
           message: err.message,
           stack: err.stack
         });
-        setError('Failed to load resume data. Please try again.');
+        setError(`Failed to load resume data: ${err.message}`);
       } finally {
         setLoading(false);
       }
     };
 
     fetchResumeData();
-  }, [resumeId]);
 
-  const handleSave = async () => {
-    if (!resumeId || !auth.currentUser) return;
+    // Cleanup function
+    return () => {
+      if (autoSaveTimer) {
+        clearTimeout(autoSaveTimer);
+      }
+    };
+  }, [resumeId, navigate]);
+
+  // Auto-save when resumeData changes
+  useEffect(() => {
+    if (!resumeData || loading) return;
+
+    // Clear any existing timer
+    if (autoSaveTimer) {
+      clearTimeout(autoSaveTimer);
+    }
+
+    // Set a new timer for auto-save
+    const timer = setTimeout(() => {
+      handleSave(true);
+    }, 3000); // Auto-save after 3 seconds of inactivity
+
+    setAutoSaveTimer(timer);
+
+    // Cleanup function
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [resumeData]);
+
+  const handleSave = async (isAutoSave = false) => {
+    if (!resumeId || !auth.currentUser || !resumeData) return;
 
     try {
+      setSaveStatus(isAutoSave ? 'Auto-saving...' : 'Saving...');
       const userId = auth.currentUser.uid;
       // Use the subcollection path for users/{userId}/resumes
       const resumeRef = doc(db, `users/${userId}/resumes`, resumeId);
+      
+      // Remove the id field before saving to Firestore
+      const { id, ...dataToSave } = resumeData;
+      
       await updateDoc(resumeRef, {
-        ...resumeData,
-        updatedAt: new Date().toISOString()
+        ...dataToSave,
+        updatedAt: serverTimestamp()
       });
+      
+      setSaveStatus(isAutoSave ? 'Auto-saved' : 'Saved');
+      
+      // Clear the save status after 3 seconds
+      setTimeout(() => {
+        setSaveStatus('');
+      }, 3000);
     } catch (err: any) {
       console.error('Error saving resume:', err);
       console.error('Detailed error:', {
@@ -61,13 +110,14 @@ const ResumeBuilder: React.FC = () => {
         message: err.message,
         stack: err.stack
       });
-      setError('Failed to save resume. Please try again.');
+      setSaveStatus(`Failed to save: ${err.message}`);
     }
   };
 
   const handleExportPDF = () => {
     // PDF export functionality will be implemented here
     console.log('Export to PDF');
+    alert('PDF export functionality coming soon!');
   };
 
   const updatePersonalInfo = (field: string, value: string) => {
@@ -113,9 +163,14 @@ const ResumeBuilder: React.FC = () => {
         <h1 className="text-2xl font-bold text-gray-900">
           {resumeData.title || 'Untitled Resume'}
         </h1>
-        <div className="flex space-x-4">
+        <div className="flex items-center space-x-4">
+          {saveStatus && (
+            <span className={`text-sm ${saveStatus.includes('Failed') ? 'text-red-600' : 'text-green-600'}`}>
+              {saveStatus}
+            </span>
+          )}
           <button
-            onClick={handleSave}
+            onClick={() => handleSave()}
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             Save

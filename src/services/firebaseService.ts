@@ -292,11 +292,29 @@ export const getTemplateById = async (templateId: string, isDefault = false): Pr
 // Resume Operations
 export const createResume = async (resumeData: Partial<Resume>): Promise<string> => {
   const userId = getCurrentUserId();
+  
+  // Ensure user document exists
+  const userDocRef = doc(db, 'users', userId);
+  const userDoc = await getDoc(userDocRef);
+  
+  if (!userDoc.exists()) {
+    // Create user document if it doesn't exist
+    const user = auth.currentUser;
+    await setDoc(userDocRef, {
+      uid: user?.uid || userId,
+      email: user?.email || '',
+      displayName: user?.displayName || '',
+      photoURL: user?.photoURL || '',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+  }
+  
+  // Create resume in user's subcollection
   const resumesCollection = collection(db, `users/${userId}/resumes`);
   const newResumeRef = doc(resumesCollection);
   
-  const newResume: Resume = {
-    resumeId: newResumeRef.id,
+  const newResume: Partial<Resume> = {
     title: resumeData.title || 'Untitled Resume',
     createdAt: serverTimestamp() as Timestamp,
     updatedAt: serverTimestamp() as Timestamp,
@@ -304,8 +322,8 @@ export const createResume = async (resumeData: Partial<Resume>): Promise<string>
     isPublic: false,
     content: resumeData.content || {
       personalInfo: {
-        name: '',
-        email: '',
+        name: auth.currentUser?.displayName || '',
+        email: auth.currentUser?.email || '',
         phone: '',
         location: '',
         website: '',
@@ -340,12 +358,40 @@ export const createResume = async (resumeData: Partial<Resume>): Promise<string>
   if (userSettingsDoc.exists()) {
     const settings = userSettingsDoc.data() as UserSettings;
     const recentResumes = settings.recentlyUsed?.resumes || [];
+    const recentTemplates = settings.recentlyUsed?.templates || [];
     
     // Add to front of array and remove duplicates
     const updatedResumes = [newResumeRef.id, ...recentResumes.filter(id => id !== newResumeRef.id)].slice(0, 10);
+    const updatedTemplates = resumeData.templateId 
+      ? [resumeData.templateId, ...recentTemplates.filter(id => id !== resumeData.templateId)].slice(0, 5)
+      : recentTemplates;
     
     await updateDoc(userSettingsRef, {
       'recentlyUsed.resumes': updatedResumes,
+      'recentlyUsed.templates': updatedTemplates,
+      'updatedAt': serverTimestamp()
+    });
+  } else {
+    // Create user settings if they don't exist
+    await setDoc(userSettingsRef, {
+      userId: userId,
+      theme: 'light',
+      language: 'en',
+      notifications: {
+        email: true,
+        browser: true,
+      },
+      defaultTemplate: '',
+      privacySettings: {
+        allowDataCollection: true,
+        shareUsageStats: true,
+      },
+      recentlyUsed: {
+        resumes: [newResumeRef.id],
+        templates: resumeData.templateId ? [resumeData.templateId] : []
+      },
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
     });
   }
   
@@ -421,6 +467,7 @@ export const updateResume = async (resumeId: string, resumeData: Partial<Resume>
     
     await updateDoc(userSettingsRef, {
       'recentlyUsed.resumes': updatedResumes,
+      'updatedAt': serverTimestamp()
     });
   }
 };
