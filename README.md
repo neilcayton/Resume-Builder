@@ -1,46 +1,126 @@
-# Getting Started with Create React App
+# ResumeForge
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+ResumeForge is a customizable and editable resume builder application that helps users create professional resumes with ease. The application offers a template library, real-time preview, and cloud storage for managing multiple resume versions.
 
-## Available Scripts
+![ResumeForge Logo](https://via.placeholder.com/1200x630?text=ResumeForge)
 
-In the project directory, you can run:
+## 🚀 Features
 
-### `npm start`
+- **Template Library**: Choose from a variety of professionally designed resume templates
+- **Real-time Preview**: See changes to your resume in real-time as you edit
+- **Cloud Storage**: Save and access your resumes from anywhere
+- **Version History**: Track changes and revert to previous versions if needed
+- **ATS Optimization**: Create resumes optimized for Applicant Tracking Systems
+- **Multiple Export Formats**: Export your resume in PDF, DOCX, and other formats
+- **User Authentication**: Secure login and registration system
+- **Responsive Design**: Works on desktop, tablet, and mobile devices
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+## 🛠️ Tech Stack
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+### Frontend
+- **React**: JavaScript library for building user interfaces
+- **TypeScript**: Static type-checking for JavaScript
+- **Tailwind CSS**: Utility-first CSS framework for rapid UI development
+- **React Router**: Navigation and routing for React applications
 
-### `npm test`
+### Backend & Infrastructure
+- **Firebase Authentication**: User authentication and management
+- **Firestore**: NoSQL cloud database for storing user data and resumes
+- **Firebase Hosting**: Deployment and hosting platform
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Development Tools
+- **Create React App**: React application bootstrapping
+- **Craco**: Configuration layer for Create React App
+- **ESLint**: JavaScript linting utility
+- **Prettier**: Code formatter
 
-### `npm run build`
+## 🏗️ Architecture
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+ResumeForge follows a modern frontend architecture with Firebase as the backend service:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Component Structure
+```
+src/
+├── components/        # Reusable UI components
+├── contexts/          # React context providers
+│   └── FirestoreContext.tsx  # Firestore data context
+├── hooks/             # Custom React hooks
+│   └── useFirestore.ts  # Firestore operations hook
+├── pages/             # Application pages/routes
+│   ├── Dashboard.tsx  # User's resume management
+│   ├── Home.tsx       # Landing page
+│   ├── Login.tsx      # Authentication
+│   ├── ResumeBuilder.tsx  # Resume editing interface
+│   └── TemplateGallery.tsx  # Template selection
+├── services/          # External service integrations
+│   └── firebaseService.ts  # Firebase/Firestore operations
+├── App.tsx            # Main application component
+└── firebase.ts        # Firebase configuration
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Database Schema
+The application uses Firestore with the following collections:
 
-### `npm run eject`
+- **users**: User profiles and settings
+- **users/{userId}/resumes**: User's resume documents
+- **templates**: Resume templates
+- **defaultTemplates**: System-provided templates
+- **sharedResumes**: Publicly shared resumes
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+### Authentication Flow
+1. User signs up/logs in via Firebase Authentication
+2. User profile is created/retrieved from Firestore
+3. Authentication state is managed through React Context
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Resume Creation Flow
+1. User selects a template from the Template Gallery
+2. A new resume document is created in the user's subcollection
+3. User is redirected to the Resume Builder to edit the resume
+4. Changes are saved in real-time to Firestore
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+## 🚀 Getting Started
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+### Prerequisites
+- Node.js (v14 or later)
+- npm or yarn
+- Firebase account
 
-## Learn More
+### Installation
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+1. Clone the repository:
+```bash
+git clone https://github.com/neilcayton/Resume-Builder.git
+cd Resume-Builder
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Set up environment variables:
+Create a `.env` file in the root directory with your Firebase configuration:
+```
+REACT_APP_FIREBASE_API_KEY=your-api-key
+REACT_APP_FIREBASE_AUTH_DOMAIN=your-auth-domain
+REACT_APP_FIREBASE_PROJECT_ID=your-project-id
+REACT_APP_FIREBASE_STORAGE_BUCKET=your-storage-bucket
+REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your-messaging-sender-id
+REACT_APP_FIREBASE_APP_ID=your-app-id
+```
+
+4. Start the development server:
+```bash
+npm start
+```
+
+## 📝 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgements
+
+- [Create React App](https://create-react-app.dev/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Firebase](https://firebase.google.com/)
+- [React Router](https://reactrouter.com/)
