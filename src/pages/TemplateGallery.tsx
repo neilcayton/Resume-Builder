@@ -153,14 +153,14 @@ const TemplateGallery: React.FC = () => {
         // Update recently used resumes in user settings
         const settings = userSettingsDoc.data();
         const recentResumes = settings.recentlyUsed?.resumes || [];
-        const updatedResumes = [docRef.id, ...recentResumes.filter(id => id !== docRef.id)].slice(0, 10);
+        const updatedResumes = [docRef.id, ...recentResumes.filter((id: string) => id !== docRef.id)].slice(0, 10);
         
         await setDoc(userSettingsRef, {
           ...settings,
           recentlyUsed: {
             ...settings.recentlyUsed,
             resumes: updatedResumes,
-            templates: [selectedTemplate, ...(settings.recentlyUsed?.templates || []).filter(id => id !== selectedTemplate)].slice(0, 5)
+            templates: [selectedTemplate, ...(settings.recentlyUsed?.templates || []).filter((id: string) => id !== selectedTemplate)].slice(0, 5)
           }
         }, { merge: true });
       }
