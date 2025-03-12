@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase';
@@ -12,6 +12,37 @@ const ResumeBuilder: React.FC = () => {
   const [activeSection, setActiveSection] = useState('personalInfo');
   const [saveStatus, setSaveStatus] = useState('');
   const [autoSaveTimer, setAutoSaveTimer] = useState<NodeJS.Timeout | null>(null);
+
+  // Define handleSave using useCallback to avoid dependency cycle
+  const handleSave = useCallback(async (isAutoSave = false) => {
+    if (!resumeId || !auth.currentUser || !resumeData) return;
+
+    try {
+      setSaveStatus(isAutoSave ? 'Auto-saving...' : 'Saving...');
+      const userId = auth.currentUser.uid;
+      // Use the subcollection path for users/{userId}/resumes
+      const resumeRef = doc(db, `users/${userId}/resumes`, resumeId);
+      
+      // Create a copy of the data without the id field before saving
+      const dataToSave = { ...resumeData };
+      delete dataToSave.id; // Remove the id field as it's already the document ID
+      
+      await updateDoc(resumeRef, {
+        ...dataToSave,
+        updatedAt: serverTimestamp()
+      });
+      
+      setSaveStatus(isAutoSave ? 'Auto-saved' : 'Saved');
+      
+      // Clear the save status after 3 seconds
+      setTimeout(() => {
+        setSaveStatus('');
+      }, 3000);
+    } catch (err: any) {
+      console.error('Error saving resume:', err);
+      setSaveStatus(`Error saving: ${err.message}`);
+    }
+  }, [resumeId, resumeData]);
 
   useEffect(() => {
     const fetchResumeData = async () => {
@@ -56,7 +87,7 @@ const ResumeBuilder: React.FC = () => {
         clearTimeout(autoSaveTimer);
       }
     };
-  }, [resumeId, navigate]);
+  }, [resumeId, navigate, autoSaveTimer]);
 
   // Auto-save when resumeData changes
   useEffect(() => {
@@ -78,41 +109,7 @@ const ResumeBuilder: React.FC = () => {
     return () => {
       clearTimeout(timer);
     };
-  }, [resumeData]);
-
-  const handleSave = async (isAutoSave = false) => {
-    if (!resumeId || !auth.currentUser || !resumeData) return;
-
-    try {
-      setSaveStatus(isAutoSave ? 'Auto-saving...' : 'Saving...');
-      const userId = auth.currentUser.uid;
-      // Use the subcollection path for users/{userId}/resumes
-      const resumeRef = doc(db, `users/${userId}/resumes`, resumeId);
-      
-      // Remove the id field before saving to Firestore
-      const { id, ...dataToSave } = resumeData;
-      
-      await updateDoc(resumeRef, {
-        ...dataToSave,
-        updatedAt: serverTimestamp()
-      });
-      
-      setSaveStatus(isAutoSave ? 'Auto-saved' : 'Saved');
-      
-      // Clear the save status after 3 seconds
-      setTimeout(() => {
-        setSaveStatus('');
-      }, 3000);
-    } catch (err: any) {
-      console.error('Error saving resume:', err);
-      console.error('Detailed error:', {
-        code: err.code,
-        message: err.message,
-        stack: err.stack
-      });
-      setSaveStatus(`Failed to save: ${err.message}`);
-    }
-  };
+  }, [resumeData, autoSaveTimer, handleSave, loading]);
 
   const handleExportPDF = () => {
     // PDF export functionality will be implemented here
