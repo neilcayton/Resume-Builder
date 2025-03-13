@@ -2,6 +2,12 @@
   command = "npm run build"
   publish = "build"
 
+[build.environment]
+  CI = "false"
+  BROWSER = "none"
+  PORT = "3000"
+  TREAT_WARNINGS_AS_ERRORS = "false"
+
 # Environment variables should be set in the Netlify dashboard
 # DO NOT include sensitive information in this file
 
